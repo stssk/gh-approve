@@ -1,0 +1,18 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Build and run",
+      "command": "go build && gh approve",
+      "type": "shell",
+      "args": [],
+      "problemMatcher": [
+        "$go"
+      ],
+      "presentation": {
+        "reveal": "always"
+      },
+      "group": "build"
+    }
+  ]
+}
