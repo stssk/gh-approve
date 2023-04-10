@@ -1,0 +1,13 @@
+name: Test action
+on:
+    push:
+        branches:
+            - main
+
+jobs:
+    print-hello:
+        runs-on: ubuntu-latest
+        environment: test
+        steps:
+            - name: echo test text
+              run: echo "Test OK ✅"
