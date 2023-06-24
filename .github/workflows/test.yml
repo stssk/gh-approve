@@ -1,11 +1,27 @@
-name: Test action
+name: Demo action
 on:
-    workflow_dispatch
+  workflow_dispatch
 
 jobs:
-    print-hello:
-        runs-on: ubuntu-latest
-        environment: test
-        steps:
-            - name: echo test text
-              run: echo "Test OK ✅"
+  demo-test:
+    runs-on: ubuntu-latest
+    environment: test
+    steps:
+      - name: echo test text
+        run: echo "Test OK ✅"
+
+  demo-staging:
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - name: echo staging text
+        run: echo "Staging OK ✅"
+
+  demo-prod:
+    runs-on: ubuntu-latest
+    environment: prod
+    needs: demo-staging
+    steps:
+      - name: echo prod text
+        run: echo "Prod OK ✅"
+
