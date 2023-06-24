@@ -9,6 +9,8 @@ import (
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/cli/go-gh"
+	"github.com/cli/go-gh/pkg/api"
+	"github.com/cli/go-gh/pkg/repository"
 )
 
 func main() {
@@ -17,12 +19,6 @@ func main() {
 		fmt.Println(err)
 		return
 	}
-	// currentUser := models.User{}
-	// err = client.Get(models.UserUrl(), &currentUser)
-	// if err != nil {
-	// 	fmt.Println(err)
-	// 	return
-	// }
 
 	currentRepo, err := gh.CurrentRepository()
 	if err != nil {
@@ -30,15 +26,30 @@ func main() {
 		return
 	}
 
+	pendingRuns, answer, shouldReturn := selectPendingRuns(client, currentRepo)
+	if shouldReturn {
+		return
+	}
+
+	pendingDeployments, approvedEnvironments, shouldReturn := selectPendingDeployments(client, currentRepo, pendingRuns, answer)
+	if shouldReturn {
+		return
+	}
+
+	approveDeployments(approvedEnvironments, pendingDeployments, client, currentRepo, pendingRuns, answer)
+}
+
+// Fetch pending runs and prompt the user to select one of them
+func selectPendingRuns(client api.RESTClient, currentRepo repository.Repository) ([]models.WorkflowRun, int, bool) {
 	runs := models.Runs{}
-	err = client.Get(models.RunsUrl(currentRepo.Owner(), currentRepo.Name()), &runs)
+	err := client.Get(models.RunsUrl(currentRepo.Owner(), currentRepo.Name()), &runs)
 	if err != nil {
 		fmt.Println(err)
-		return
+		return nil, 0, true
 	}
 	if runs.TotalCount == 0 {
 		fmt.Println("No runs detected")
-		return
+		return nil, 0, true
 	}
 	pendingRuns := make([]models.WorkflowRun, 0)
 	pendingRunsTexts := make([]string, 0)
@@ -46,13 +57,8 @@ func main() {
 		if run.Status == "waiting" {
 			pendingRuns = append(pendingRuns, run)
 			pendingRunsTexts = append(pendingRunsTexts, fmt.Sprintf("%s, %s (%s)", run.HeadCommit.Message, run.Name, run.HeadBranch))
-			// } else {
-			// 	fmt.Printf("%s: %s", run.Status, run.HeadCommit.Message)
-			// fmt.Println("🎉 No waiting workflow runs found")
-			// return
 		}
 	}
-	// var selectedRun int
 	promptRuns := &survey.Select{
 		Message: "Select a workflow run",
 		Options: pendingRunsTexts,
@@ -61,14 +67,18 @@ func main() {
 	answer := -1
 	survey.AskOne(promptRuns, &answer, survey.WithValidator(survey.Required))
 	if answer < 0 {
-		return
+		return nil, 0, true
 	}
+	return pendingRuns, answer, false
+}
 
+// Fetch pending deployments for a single run and prompt the user to select 0, 1 or more of them
+func selectPendingDeployments(client api.RESTClient, currentRepo repository.Repository, pendingRuns []models.WorkflowRun, answer int) (models.PendingDeployments, []int, bool) {
 	pendingDeployments := models.PendingDeployments{}
-	err = client.Get(models.PendingDeploymentsUrl(currentRepo.Owner(), currentRepo.Name(), pendingRuns[answer].ID), &pendingDeployments)
+	err := client.Get(models.PendingDeploymentsUrl(currentRepo.Owner(), currentRepo.Name(), pendingRuns[answer].ID), &pendingDeployments)
 	if err != nil {
 		fmt.Println(err)
-		return
+		return nil, nil, true
 	}
 
 	pendingDeploymentTexts := make([]string, len(pendingDeployments))
@@ -84,9 +94,13 @@ func main() {
 	survey.AskOne(promptDeployments, &approvedEnvironments)
 
 	if len(approvedEnvironments) == 0 {
-		return
+		return nil, nil, true
 	}
+	return pendingDeployments, approvedEnvironments, false
+}
 
+// Send the approval request to GitHub actions
+func approveDeployments(approvedEnvironments []int, pendingDeployments models.PendingDeployments, client api.RESTClient, currentRepo repository.Repository, pendingRuns []models.WorkflowRun, answer int) {
 	approveIds := make([]int, len(approvedEnvironments))
 	for i, e := range approvedEnvironments {
 		approveIds[i] = pendingDeployments[e].Environment.ID
