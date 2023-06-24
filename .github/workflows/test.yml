@@ -1,8 +1,6 @@
 name: Test action
 on:
-    push:
-        branches:
-            - main
+    workflow_dispatch
 
 jobs:
     print-hello:
