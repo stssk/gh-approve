@@ -1,5 +1,7 @@
 # GH Approve
 
+![A demo previewing the extension](demo.gif)
+
 ## Installing the extension
 
 1. Install the [github-cli](https://cli.github.com)
