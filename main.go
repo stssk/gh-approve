@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/stssk/gh-approve/models"
 
@@ -53,9 +54,10 @@ func selectPendingRuns(client api.RESTClient, currentRepo repository.Repository)
 	}
 	pendingRuns := make([]models.WorkflowRun, 0)
 	pendingRunsTexts := make([]string, 0)
+	now := time.Now()
 	for _, run := range runs.WorkflowRuns {
 		pendingRuns = append(pendingRuns, run)
-		pendingRunsTexts = append(pendingRunsTexts, fmt.Sprintf("%s, %s (%s)", run.HeadCommit.Message, run.Name, run.HeadBranch))
+		pendingRunsTexts = append(pendingRunsTexts, fmt.Sprintf("%s, %s (%s) %s ago", run.HeadCommit.Message, run.Name, run.HeadBranch, now.Sub(run.RunStartedAt).Round(time.Second)))
 	}
 	promptRuns := &survey.Select{
 		Message: "Select a workflow run",
