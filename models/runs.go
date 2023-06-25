@@ -17,6 +17,7 @@ type Runs struct {
 type WorkflowRun struct {
 	ID               int       `json:"id"`
 	Name             string    `json:"name"`
+	DisplayTitle     string    `json:"display_title"`
 	NodeID           string    `json:"node_id"`
 	CheckSuiteID     int       `json:"check_suite_id"`
 	CheckSuiteNodeID string    `json:"check_suite_node_id"`

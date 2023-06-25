@@ -57,7 +57,7 @@ func selectPendingRuns(client api.RESTClient, currentRepo repository.Repository)
 	now := time.Now()
 	for _, run := range runs.WorkflowRuns {
 		pendingRuns = append(pendingRuns, run)
-		pendingRunsTexts = append(pendingRunsTexts, fmt.Sprintf("%s, %s (%s) %s ago", run.HeadCommit.Message, run.Name, run.HeadBranch, now.Sub(run.RunStartedAt).Round(time.Second)))
+		pendingRunsTexts = append(pendingRunsTexts, fmt.Sprintf("%s, %s (%s) %s ago", run.DisplayTitle, run.Name, run.HeadBranch, now.Sub(run.RunStartedAt).Round(time.Second)))
 	}
 	promptRuns := &survey.Select{
 		Message: "Select a workflow run",
