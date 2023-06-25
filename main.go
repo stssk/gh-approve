@@ -42,7 +42,7 @@ func main() {
 // Fetch pending runs and prompt the user to select one of them
 func selectPendingRuns(client api.RESTClient, currentRepo repository.Repository) ([]models.WorkflowRun, int, bool) {
 	runs := models.Runs{}
-	err := client.Get(models.RunsUrl(currentRepo.Owner(), currentRepo.Name()), &runs)
+	err := client.Get(models.RunsUrl(currentRepo.Owner(), currentRepo.Name())+"?status=waiting", &runs)
 	if err != nil {
 		fmt.Println(err)
 		return nil, 0, true
@@ -54,10 +54,8 @@ func selectPendingRuns(client api.RESTClient, currentRepo repository.Repository)
 	pendingRuns := make([]models.WorkflowRun, 0)
 	pendingRunsTexts := make([]string, 0)
 	for _, run := range runs.WorkflowRuns {
-		if run.Status == "waiting" {
-			pendingRuns = append(pendingRuns, run)
-			pendingRunsTexts = append(pendingRunsTexts, fmt.Sprintf("%s, %s (%s)", run.HeadCommit.Message, run.Name, run.HeadBranch))
-		}
+		pendingRuns = append(pendingRuns, run)
+		pendingRunsTexts = append(pendingRunsTexts, fmt.Sprintf("%s, %s (%s)", run.HeadCommit.Message, run.Name, run.HeadBranch))
 	}
 	promptRuns := &survey.Select{
 		Message: "Select a workflow run",
