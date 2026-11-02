@@ -9,19 +9,18 @@ import (
 	"github.com/stssk/gh-approve/models"
 
 	"github.com/AlecAivazis/survey/v2"
-	"github.com/cli/go-gh"
-	"github.com/cli/go-gh/pkg/api"
-	"github.com/cli/go-gh/pkg/repository"
+	"github.com/cli/go-gh/v2/pkg/api"
+	"github.com/cli/go-gh/v2/pkg/repository"
 )
 
 func main() {
-	client, err := gh.RESTClient(nil)
+	client, err := api.DefaultRESTClient()
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	currentRepo, err := gh.CurrentRepository()
+	currentRepo, err := repository.Current()
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -41,9 +40,9 @@ func main() {
 }
 
 // Fetch pending runs and prompt the user to select one of them
-func selectPendingRuns(client api.RESTClient, currentRepo repository.Repository) ([]models.WorkflowRun, int, bool) {
+func selectPendingRuns(client *api.RESTClient, currentRepo repository.Repository) ([]models.WorkflowRun, int, bool) {
 	runs := models.Runs{}
-	err := client.Get(models.RunsUrl(currentRepo.Owner(), currentRepo.Name())+"?status=waiting", &runs)
+	err := client.Get(models.RunsUrl(currentRepo.Owner, currentRepo.Name)+"?status=waiting", &runs)
 	if err != nil {
 		fmt.Println(err)
 		return nil, 0, true
@@ -73,9 +72,9 @@ func selectPendingRuns(client api.RESTClient, currentRepo repository.Repository)
 }
 
 // Fetch pending deployments for a single run and prompt the user to select 0, 1 or more of them
-func selectPendingDeployments(client api.RESTClient, currentRepo repository.Repository, pendingRuns []models.WorkflowRun, answer int) (models.PendingDeployments, []int, bool) {
+func selectPendingDeployments(client *api.RESTClient, currentRepo repository.Repository, pendingRuns []models.WorkflowRun, answer int) (models.PendingDeployments, []int, bool) {
 	pendingDeployments := models.PendingDeployments{}
-	err := client.Get(models.PendingDeploymentsUrl(currentRepo.Owner(), currentRepo.Name(), pendingRuns[answer].ID), &pendingDeployments)
+	err := client.Get(models.PendingDeploymentsUrl(currentRepo.Owner, currentRepo.Name, pendingRuns[answer].ID), &pendingDeployments)
 	if err != nil {
 		fmt.Println(err)
 		return nil, nil, true
@@ -100,7 +99,7 @@ func selectPendingDeployments(client api.RESTClient, currentRepo repository.Repo
 }
 
 // Send the approval request to GitHub actions
-func approveDeployments(approvedEnvironments []int, pendingDeployments models.PendingDeployments, client api.RESTClient, currentRepo repository.Repository, pendingRuns []models.WorkflowRun, answer int) {
+func approveDeployments(approvedEnvironments []int, pendingDeployments models.PendingDeployments, client *api.RESTClient, currentRepo repository.Repository, pendingRuns []models.WorkflowRun, answer int) {
 	approveIds := make([]int, len(approvedEnvironments))
 	for i, e := range approvedEnvironments {
 		approveIds[i] = pendingDeployments[e].Environment.ID
@@ -116,7 +115,7 @@ func approveDeployments(approvedEnvironments []int, pendingDeployments models.Pe
 		return
 	}
 	approvedDeployments := models.DeploymentResponse{}
-	err = client.Post(models.PendingDeploymentsUrl(currentRepo.Owner(), currentRepo.Name(), pendingRuns[answer].ID), bytes.NewReader(req), &approvedDeployments)
+	err = client.Post(models.PendingDeploymentsUrl(currentRepo.Owner, currentRepo.Name, pendingRuns[answer].ID), bytes.NewReader(req), &approvedDeployments)
 	if err != nil {
 		fmt.Println(err)
 		return
