@@ -8,7 +8,7 @@ import (
 
 	"github.com/stssk/gh-approve/models"
 
-	"github.com/AlecAivazis/survey/v2"
+	"charm.land/huh/v2"
 	"github.com/cli/go-gh/v2/pkg/api"
 	"github.com/cli/go-gh/v2/pkg/repository"
 )
@@ -52,20 +52,20 @@ func selectPendingRuns(client *api.RESTClient, currentRepo repository.Repository
 		return nil, 0, true
 	}
 	pendingRuns := make([]models.WorkflowRun, 0)
-	pendingRunsTexts := make([]string, 0)
+	runOptions := make([]huh.Option[int], 0)
 	now := time.Now()
-	for _, run := range runs.WorkflowRuns {
+	for i, run := range runs.WorkflowRuns {
 		pendingRuns = append(pendingRuns, run)
-		pendingRunsTexts = append(pendingRunsTexts, fmt.Sprintf("%s, %s (%s) %s ago", run.DisplayTitle, run.Name, run.HeadBranch, now.Sub(run.RunStartedAt).Round(time.Second)))
-	}
-	promptRuns := &survey.Select{
-		Message: "Select a workflow run",
-		Options: pendingRunsTexts,
+		runOptions = append(runOptions, huh.NewOption(fmt.Sprintf("%s, %s (%s) %s ago", run.DisplayTitle, run.Name, run.HeadBranch, now.Sub(run.RunStartedAt).Round(time.Second)), i))
 	}
 
 	answer := -1
-	survey.AskOne(promptRuns, &answer, survey.WithValidator(survey.Required))
-	if answer < 0 {
+	err = huh.NewSelect[int]().
+		Title("Select a workflow run").
+		Options(runOptions...).
+		Value(&answer).
+		Run()
+	if err != nil || answer < 0 {
 		return nil, 0, true
 	}
 	return pendingRuns, answer, false
@@ -80,19 +80,18 @@ func selectPendingDeployments(client *api.RESTClient, currentRepo repository.Rep
 		return nil, nil, true
 	}
 
-	pendingDeploymentTexts := make([]string, len(pendingDeployments))
+	deploymentOptions := make([]huh.Option[int], len(pendingDeployments))
 	for i, d := range pendingDeployments {
-		pendingDeploymentTexts[i] = d.Environment.Name
+		deploymentOptions[i] = huh.NewOption(d.Environment.Name, i)
 	}
 
 	approvedEnvironments := []int{}
-	promptDeployments := &survey.MultiSelect{
-		Message: "Select environments to approve",
-		Options: pendingDeploymentTexts,
-	}
-	survey.AskOne(promptDeployments, &approvedEnvironments)
-
-	if len(approvedEnvironments) == 0 {
+	err = huh.NewMultiSelect[int]().
+		Title("Select environments to approve").
+		Options(deploymentOptions...).
+		Value(&approvedEnvironments).
+		Run()
+	if err != nil || len(approvedEnvironments) == 0 {
 		return nil, nil, true
 	}
 	return pendingDeployments, approvedEnvironments, false
